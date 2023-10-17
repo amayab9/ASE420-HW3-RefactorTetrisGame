@@ -53,6 +53,56 @@ class TetrisPiece:
         return self.x, self.y
 
 
+class GameBoard:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.field = [[0] * self.width for _ in range(self.height)]
+
+    def clear(self):
+        self.field = [[0] * self.width for _ in range(self.height)]
+
+    def draw(self, screen, block_size, draw_x, draw_y, colors):
+        for i in range(self.height):
+            for j in range(self.width):
+                pygame.draw.rect(
+                    screen,
+                    (128, 128, 128),
+                    [draw_x + block_size * j, draw_y + block_size * i, block_size, block_size],
+                    1,
+                )
+                if self.field[i][j] > 0:
+                    pygame.draw.rect(
+                        screen,
+                        colors[self.field[i][j]],
+                        [draw_x + block_size * j + 1, draw_y + block_size * i + 1, block_size - 2, block_size - 1],
+                    )
+
+    def intersects(self, piece, piece_x, piece_y):
+        for y in range(piece.PIECE_DIMENSION):
+            for x in range(piece.PIECE_DIMENSION):
+                if piece.get_current_shape()[y * piece.PIECE_DIMENSION + x] > 0:
+                    board_x = piece_x + x
+                    board_y = piece_y + y
+                    if (
+                            board_x < 0
+                            or board_x >= self.width
+                            or board_y >= self.height
+                            or (board_y >= 0 and self.field[board_y][board_x] > 0)
+                    ):
+                        return True
+        return False
+
+    def freeze(self, piece, piece_x, piece_y):
+        for y in range(piece.PIECE_DIMENSION):
+            for x in range(piece.PIECE_DIMENSION):
+                if piece.get_current_shape()[y * piece.PIECE_DIMENSION + x] > 0:
+                    board_x = piece_x + x
+                    board_y = piece_y + y
+                    if board_y >= 0:
+                        self.field[board_y][board_x] = piece.color
+
+
 class TetrisGame:
     PIECE_DIMENSION = 4
     BLOCK_SIZE = 20
@@ -73,6 +123,7 @@ class TetrisGame:
 
         self.initialize_board(20, 10)
         self.current_piece = TetrisPiece(self.Width, self.Height)
+        self.board = GameBoard(self.Width, self.Height)
         self.done = False
         self.level = 1
 
@@ -97,7 +148,7 @@ class TetrisGame:
         return False
 
     def break_lines(self):
-        full_rows = []
+        full_rows = []  # List to store indices of full rows
         for i in range(1, self.Height):
             if all(cell > 0 for cell in self.Field[i]):
                 full_rows.append(i)
